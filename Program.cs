@@ -14,6 +14,18 @@ namespace sapicmd
             return wc.DownloadString(filename);
         }
 
+        static bool IsControlItem(object item)
+        {
+            if (item is VoiceInfo)
+                return true;
+            return false;
+        }
+
+        enum SsmlElementType
+        {
+            Voice
+        }
+
         static int Main(string[] args)
         {
             SpeechSynthesizer synthesizer = new SpeechSynthesizer();
@@ -51,6 +63,37 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add(ReadFileContents(args[i]));
+                }
+                else if (lower == "-voice")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing voice name after -voice");
+                        return 1;
+                    }
+                    string name = args[i];
+                    var voices = synthesizer.GetInstalledVoices();
+                    VoiceInfo info = null;
+                    foreach (var candidate in voices)
+                    {
+                        var cinfo = candidate.VoiceInfo;
+                        if (cinfo.Id == name || cinfo.Name.ToLowerInvariant().Contains(name.ToLowerInvariant()))
+                        {
+                            if (!candidate.Enabled)
+                            {
+                                Console.Error.WriteLine("The selcted voice, {0}, is disabled", cinfo.Name);
+                                return 1;
+                            }
+                            info = cinfo;
+                            break;
+                        }
+                    }
+                    if (info == null)
+                    {
+                        Console.Error.WriteLine("No voice with the name '{0}' was found.", name);
+                    }
+                    prompt_items.Add(info);
                 }
                 else if (lower == "-listvoices")
                 {
@@ -90,7 +133,27 @@ namespace sapicmd
                 return 1;
             }
 
+            int control_items_at_end = 0;
+
+            while (control_items_at_end < prompt_items.Count &&
+                IsControlItem(prompt_items[prompt_items.Count - 1 - control_items_at_end]))
+                control_items_at_end++;
+
+            if (control_items_at_end == prompt_items.Count)
+            {
+                Console.Error.WriteLine("WARNING: None of the given instructions do anything without something to read.");
+            }
+            else if (control_items_at_end != 0)
+            {
+                Console.WriteLine("WARNING: The -voice instruction only affects the instructions after it. Putting it at the end of the line does not make sense. These instructions will be automatically moved to the beginning.");
+
+                List<object> end_items = prompt_items.GetRange(prompt_items.Count - control_items_at_end, control_items_at_end);
+                prompt_items.RemoveRange(prompt_items.Count - control_items_at_end, control_items_at_end);
+                prompt_items.InsertRange(0, end_items);
+            }
+
             PromptBuilder builder = new PromptBuilder();
+            Stack<SsmlElementType> elements = new Stack<SsmlElementType>();
 
             foreach (var item in prompt_items)
             {
@@ -98,9 +161,29 @@ namespace sapicmd
                 {
                     builder.AppendText(text);
                 }
+                else if (item is VoiceInfo info)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Voice)
+                    {
+                        elements.Pop();
+                        builder.EndVoice();
+                    }
+                    builder.StartVoice(info);
+                    elements.Push(SsmlElementType.Voice);
+                }
                 else
                 {
                     throw new ApplicationException(String.Format("Unexpected error, don't know what to do with {0}", item));
+                }
+            }
+
+            while (elements.Count != 0)
+            {
+                switch (elements.Pop())
+                {
+                    case SsmlElementType.Voice:
+                        builder.EndVoice();
+                        break;
                 }
             }
 
@@ -121,6 +204,9 @@ namespace sapicmd
             Console.WriteLine("-textFile FILENAME");
             Console.WriteLine("-textFile URL");
             Console.WriteLine("    Read the contents of the given file as text.");
+            Console.WriteLine("-voice NAME");
+            Console.WriteLine("    Switch to a specific voice.");
+            Console.WriteLine("    EXAMPLE: sapicmd -voice Zira -text \"Spoken as Zira\" -voice David -text \"Spoken as David\"");
             Console.WriteLine("-listVoices");
             Console.WriteLine("    Print a list of installed voices and exit.");
             Console.WriteLine("-help");
