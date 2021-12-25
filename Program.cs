@@ -17,11 +17,22 @@ namespace sapicmd
             for (int i=0; i < args.Length; i++)
             {
                 string item = args[i];
+                string lower = item.ToLowerInvariant();
 
                 if (!item.StartsWith("-"))
                 {
                     // Just read this as text
                     prompt_items.Add(item);
+                }
+                else if (lower == "-text")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing text to read after -text");
+                        return 1;
+                    }
+                    prompt_items.Add(args[i]);
                 }
                 else
                 {
@@ -63,8 +74,9 @@ namespace sapicmd
             Console.WriteLine();
             Console.WriteLine("Instructions may be any of the following:");
             Console.WriteLine();
-            Console.WriteLine("TEXT");
-            Console.WriteLine("    Any command-line argument not starting with - will be read as text.");
+            Console.WriteLine("-text TEXT");
+            Console.WriteLine("    Read the given text.");
+            Console.WriteLine("    Text can also be given without the -text switch as long as it does not start with '-'.");
         }
     }
 }
