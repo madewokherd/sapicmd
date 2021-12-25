@@ -55,6 +55,25 @@ namespace sapicmd
             }
         }
 
+        enum LoopFade
+        {
+            Level,
+            FadeIn,
+            FadeOut
+        }
+
+        class LoopItem
+        {
+            public int count;
+            public LoopFade fade;
+            public LoopItem(int count, LoopFade fade)
+            {
+                this.count = count;
+                this.fade = fade;
+            }
+        }
+
+
         enum SpecialItem
         {
             Reset
@@ -224,6 +243,34 @@ namespace sapicmd
                     }
                     prompt_items.Add(new JsonItem(ReadFileContents(args[i])));
                 }
+                else if (lower == "-loop" || lower == "-fadeoutloop" || lower == "-fadeinloop")
+                {
+                    i++;
+                    int count;
+                    if (!int.TryParse(args[i], out count) || count < 1)
+                    {
+                        Console.Error.WriteLine("{0} must be followed by a positive integer", lower);
+                        return 1;
+                    }
+
+                    LoopFade fade;
+                    switch (lower)
+                    {
+                        case "-loop":
+                            fade = LoopFade.Level;
+                            break;
+                        case "-fadeoutloop":
+                            fade = LoopFade.FadeOut;
+                            break;
+                        case "-fadeinloop":
+                            fade = LoopFade.FadeIn;
+                            break;
+                        default:
+                            throw new Exception("unreachable");
+                    }
+
+                    prompt_items.Add(new LoopItem(count, fade));
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -261,6 +308,63 @@ namespace sapicmd
                 List<object> end_items = prompt_items.GetRange(prompt_items.Count - control_items_at_end, control_items_at_end);
                 prompt_items.RemoveRange(prompt_items.Count - control_items_at_end, control_items_at_end);
                 prompt_items.InsertRange(0, end_items);
+            }
+
+            // Process any Loop items first
+            for (int i = 0; i < prompt_items.Count; i++)
+            {
+                if (prompt_items[i] is LoopItem loop)
+                {
+                    var new_items = new List<object>();
+                    for (int loops=0; loops < loop.count; loops++)
+                    {
+                        double volume_multiplier;
+                        switch (loop.fade)
+                        {
+                            case LoopFade.FadeIn:
+                                volume_multiplier = 1.0 * (loops + 1) / loop.count;
+                                break;
+                            case LoopFade.FadeOut:
+                                volume_multiplier = 1.0 * (loop.count - loops) / loop.count;
+                                break;
+                            case LoopFade.Level:
+                            default:
+                                volume_multiplier = 1.0;
+                                break;
+                        }
+
+                        if (volume_multiplier != 1.0)
+                        {
+                            new_items.Add(new VolumeItem((int)(100 * volume_multiplier)));
+                        }
+
+                        for (int j = 0; j < i; j++)
+                        {
+                            if (prompt_items[j] is VolumeItem volume_item)
+                            {
+                                new_items.Add(new VolumeItem((int)(volume_item.volume * volume_multiplier)));
+                            }
+                            else if (prompt_items[j] is SpecialItem.Reset)
+                            {
+                                new_items.Add(SpecialItem.Reset);
+                                new_items.Add(new VolumeItem((int)(100 * volume_multiplier)));
+                            }
+                            else
+                            {
+                                new_items.Add(prompt_items[j]);
+                            }
+                        }
+
+                        if (loops != loop.count - 1)
+                        {
+                            new_items.Add(SpecialItem.Reset);
+                        }
+                    }
+
+                    prompt_items.RemoveRange(0, i + 1);
+                    prompt_items.InsertRange(0, new_items);
+                    i = new_items.Count;
+                }
             }
 
             List<object> prompts = new List<object>();
@@ -489,6 +593,12 @@ namespace sapicmd
             Console.WriteLine("    NOTE: In most cases, it's recommended to use -volume instead.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
+            Console.WriteLine("-loop N");
+            Console.WriteLine("-fadeInLoop N");
+            Console.WriteLine("-fadeOutLoop N");
+            Console.WriteLine("    Repeat all previous instructions N times.");
+            Console.WriteLine("    If -fadeInLoop is used, gradually increase to full volume.");
+            Console.WriteLine("    If -fadeOutLoop is used, gradually decrease from full volume.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
