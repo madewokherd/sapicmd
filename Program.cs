@@ -16,16 +16,17 @@ namespace sapicmd
 
         static bool IsControlItem(object item)
         {
-            if (item is VoiceInfo)
-                return true;
-            if (item is SpecialItem.Reset)
+            if (item is VoiceInfo ||
+                item is SpecialItem.Reset ||
+                item is PromptRate)
                 return true;
             return false;
         }
 
         enum SsmlElementType
         {
-            Voice
+            Voice,
+            Style
         }
 
         enum SpecialItem
@@ -102,6 +103,22 @@ namespace sapicmd
                     }
                     prompt_items.Add(info);
                 }
+                else if (lower == "-rate")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing rate after -rate");
+                        return 1;
+                    }
+                    int rate;
+                    if (!int.TryParse(args[i], out rate) || rate < 0 || rate > 5)
+                    {
+                        Console.Error.WriteLine("-rate must be followed by a number from 0 to 5");
+                        return 1;
+                    }
+                    prompt_items.Add((PromptRate)rate);
+                }
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
@@ -156,7 +173,7 @@ namespace sapicmd
             }
             else if (control_items_at_end != 0)
             {
-                Console.WriteLine("WARNING: The -voice instruction only affects the instructions after it. Putting it at the end of the line does not make sense. These instructions will be automatically moved to the beginning.");
+                Console.WriteLine("WARNING: Instructions that configure the voice only affect the instructions after them. Putting them at the end of the line does not make sense. These instructions will be automatically moved to the beginning.");
 
                 List<object> end_items = prompt_items.GetRange(prompt_items.Count - control_items_at_end, control_items_at_end);
                 prompt_items.RemoveRange(prompt_items.Count - control_items_at_end, control_items_at_end);
@@ -165,6 +182,7 @@ namespace sapicmd
 
             PromptBuilder builder = new PromptBuilder();
             Stack<SsmlElementType> elements = new Stack<SsmlElementType>();
+            PromptStyle style = new PromptStyle();
 
             foreach (var item in prompt_items)
             {
@@ -182,9 +200,21 @@ namespace sapicmd
                     builder.StartVoice(info);
                     elements.Push(SsmlElementType.Voice);
                 }
+                else if (item is PromptRate rate)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Style)
+                    {
+                        elements.Pop();
+                        builder.EndStyle();
+                    }
+                    style.Rate = rate;
+                    builder.StartStyle(style);
+                    elements.Push(SsmlElementType.Style);
+                }
                 else if (item is SpecialItem.Reset)
                 {
                     ResetVoice(builder, elements);
+                    style = new PromptStyle();
                 }
                 else
                 {
@@ -208,6 +238,9 @@ namespace sapicmd
                     case SsmlElementType.Voice:
                         builder.EndVoice();
                         break;
+                    case SsmlElementType.Style:
+                        builder.EndStyle();
+                        break;
                 }
             }
         }
@@ -229,6 +262,10 @@ namespace sapicmd
             Console.WriteLine("    EXAMPLE: sapicmd -voice Zira -text \"Spoken as Zira\" -voice David -text \"Spoken as David\"");
             Console.WriteLine("-listVoices");
             Console.WriteLine("    Print a list of installed voices and exit.");
+            Console.WriteLine("-rate RATE");
+            Console.WriteLine("    Change the rate of speech. RATE must be a number from 0 to 5.");
+            Console.WriteLine("    0 sets the rate to the default.");
+            Console.WriteLine("    1 is the fastest, and 5 is the slowest.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
             Console.WriteLine("-help");
