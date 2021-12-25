@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Speech.Synthesis;
+using System.Text;
+using System.Text.Json;
 
 namespace sapicmd
 {
     internal class Program
     {
         SpeechSynthesizer synthesizer = new SpeechSynthesizer();
+        Random random = new Random();
 
         static string ReadFileContents(string filename)
         {
@@ -40,6 +43,15 @@ namespace sapicmd
             public VolumeItem(int volume)
             {
                 this.volume = volume;
+            }
+        }
+
+        class JsonItem
+        {
+            public string raw_json;
+            public JsonItem(string raw_json)
+            {
+                this.raw_json = raw_json;
             }
         }
 
@@ -202,6 +214,16 @@ namespace sapicmd
                     }
                     return 0;
                 }
+                else if (lower == "-json")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or url after -json");
+                        return 1;
+                    }
+                    prompt_items.Add(new JsonItem(ReadFileContents(args[i])));
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -253,6 +275,10 @@ namespace sapicmd
                 if (item is string text)
                 {
                     builder.AppendText(text);
+                }
+                else if (item is JsonItem json)
+                {
+                    builder.AppendText(JsonToText(json.raw_json));
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -348,6 +374,64 @@ namespace sapicmd
 
             return 0;
         }
+
+        private string JsonToText(string raw_json)
+        {
+            using (var json = JsonDocument.Parse(raw_json))
+            {
+                var root = json.RootElement;
+
+                string result = "SENTENCES";
+
+                while (true)
+                {
+                    bool made_substitution = false;
+
+                    foreach (var prop in root.EnumerateObject())
+                    {
+                        int index = result.IndexOf(prop.Name.ToUpperInvariant(), StringComparison.InvariantCulture);
+                        if (index != -1)
+                        {
+                            result = result.Substring(0, index) +
+                                JsonElementToText(prop.Value, false) +
+                                result.Substring(index + prop.Name.Length);
+                            made_substitution = true;
+                            break;
+                        }
+                    }
+
+                    if (!made_substitution)
+                        break;
+                }
+
+                return result;
+            }
+        }
+
+        private string JsonElementToText(JsonElement value, bool is_sequence)
+        {
+            switch (value.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return value.GetString();
+                case JsonValueKind.Array:
+                    if (is_sequence)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        foreach (var item in value.EnumerateArray())
+                        {
+                            sb.Append(JsonElementToText(item, false));
+                            sb.Append(" ");
+                        }
+                        return sb.ToString();
+                    }
+                    int index = random.Next(value.GetArrayLength());
+                    return JsonElementToText(value[index], true);
+                default:
+                    throw new Exception("Invalid JSON input");
+            }
+        }
+
         static int Main(string[] args)
         {
             return new Program().ProcessCommandLine(args);
@@ -405,6 +489,9 @@ namespace sapicmd
             Console.WriteLine("    NOTE: In most cases, it's recommended to use -volume instead.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
+            Console.WriteLine("-json FILENAME");
+            Console.WriteLine("-json URL");
+            Console.WriteLine("    Randomize text based on the given JSON file.");
             Console.WriteLine("-help");
             Console.WriteLine("    Print this help text and exit.");
         }
