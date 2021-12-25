@@ -27,7 +27,7 @@ namespace sapicmd
                 string item = args[i];
                 string lower = item.ToLowerInvariant();
 
-                if (!item.StartsWith("-"))
+                if (!item.StartsWith("-") && item != "/?")
                 {
                     // Just read this as text
                     prompt_items.Add(item);
@@ -51,6 +51,11 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add(ReadFileContents(args[i]));
+                }
+                else if (lower == "-help" || lower == "-h" || lower == "/?")
+                {
+                    Usage();
+                    return 0;
                 }
                 else
                 {
@@ -98,6 +103,8 @@ namespace sapicmd
             Console.WriteLine("-textFile FILENAME");
             Console.WriteLine("-textFile URL");
             Console.WriteLine("    Read the contents of the given file as text.");
+            Console.WriteLine("-help");
+            Console.WriteLine("    Print this help text and exit.");
         }
     }
 }
