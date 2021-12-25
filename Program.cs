@@ -7,6 +7,8 @@ namespace sapicmd
 {
     internal class Program
     {
+        SpeechSynthesizer synthesizer = new SpeechSynthesizer();
+
         static string ReadFileContents(string filename)
         {
             WebClient wc = new WebClient();
@@ -20,7 +22,8 @@ namespace sapicmd
                 item is SpecialItem.Reset ||
                 item is PromptRate ||
                 item is PromptEmphasis ||
-                item is PromptVolume)
+                item is PromptVolume ||
+                item is VolumeItem)
                 return true;
             return false;
         }
@@ -31,14 +34,22 @@ namespace sapicmd
             Style
         }
 
+        class VolumeItem
+        {
+            public int volume;
+            public VolumeItem(int volume)
+            {
+                this.volume = volume;
+            }
+        }
+
         enum SpecialItem
         {
             Reset
         }
 
-        static int Main(string[] args)
+        int ProcessCommandLine(string[] args)
         {
-            SpeechSynthesizer synthesizer = new SpeechSynthesizer();
             List<object> prompt_items = new List<object>();
 
             synthesizer.SetOutputToDefaultAudioDevice();
@@ -137,6 +148,22 @@ namespace sapicmd
                     }
                     prompt_items.Add((PromptEmphasis)emphasis);
                 }
+                else if (lower == "-volume")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing number after -volume");
+                        return 1;
+                    }
+                    int volume;
+                    if (!int.TryParse(args[i], out volume) || volume < 0 || volume > 100)
+                    {
+                        Console.Error.WriteLine("-volume must be followed by a number from 0 to 100");
+                        return 1;
+                    }
+                    prompt_items.Add(new VolumeItem(volume));
+                }
                 else if (lower == "-voicevolume")
                 {
                     i++;
@@ -214,9 +241,12 @@ namespace sapicmd
                 prompt_items.InsertRange(0, end_items);
             }
 
+            List<object> prompts = new List<object>();
             PromptBuilder builder = new PromptBuilder();
             Stack<SsmlElementType> elements = new Stack<SsmlElementType>();
             PromptStyle style = new PromptStyle();
+            VoiceInfo voiceinfo = null;
+            int currentVolume = 100;
 
             foreach (var item in prompt_items)
             {
@@ -231,6 +261,7 @@ namespace sapicmd
                         elements.Pop();
                         builder.EndVoice();
                     }
+                    voiceinfo = info;
                     builder.StartVoice(info);
                     elements.Push(SsmlElementType.Voice);
                 }
@@ -267,10 +298,30 @@ namespace sapicmd
                     builder.StartStyle(style);
                     elements.Push(SsmlElementType.Style);
                 }
+                else if (item is VolumeItem volume_item)
+                {
+                    ResetVoice(builder, elements);
+                    prompts.Add(builder);
+                    builder = new PromptBuilder();
+                    if (voiceinfo != null)
+                    {
+                        builder.StartVoice(voiceinfo);
+                        elements.Push(SsmlElementType.Voice);
+                    }
+                    builder.StartStyle(style);
+                    elements.Push(SsmlElementType.Style);
+                    prompts.Add(volume_item);
+                    currentVolume = volume_item.volume;
+                }
                 else if (item is SpecialItem.Reset)
                 {
                     ResetVoice(builder, elements);
                     style = new PromptStyle();
+                    if (currentVolume != 100)
+                    {
+                        currentVolume = 100;
+                    }
+                    voiceinfo = null;
                 }
                 else
                 {
@@ -278,11 +329,28 @@ namespace sapicmd
                 }
             }
 
+            prompts.Add(builder);
+
             ResetVoice(builder, elements);
 
-            synthesizer.Speak(builder);
+            foreach (var prompt in prompts)
+            {
+                if (prompt is PromptBuilder promptbuilder)
+                {
+                    synthesizer.Speak(promptbuilder);
+                    synthesizer = new SpeechSynthesizer();
+                }
+                else if (prompt is VolumeItem volumeitem)
+                {
+                    synthesizer.Volume = volumeitem.volume;
+                }
+            }
 
             return 0;
+        }
+        static int Main(string[] args)
+        {
+            return new Program().ProcessCommandLine(args);
         }
 
         private static void ResetVoice(PromptBuilder builder, Stack<SsmlElementType> elements)
@@ -327,9 +395,14 @@ namespace sapicmd
             Console.WriteLine("    Note that this is unsupported by the default voices in Windows, and will have no effect if a default voice is used.");
             Console.WriteLine("    0 sets emphasis to the default.");
             Console.WriteLine("    1 is the strongest.");
+            Console.WriteLine("-volume VOLUME");
+            Console.WriteLine("    Change the volume of output. VOLUME must be a number from 0 to 100.");
+            Console.WriteLine("    0 is silent, and 100 is full volume.");
+            Console.WriteLine("    NOTE: This cannot be used with XML output. To output a change in volume to XML, use -voiceVolume.");
             Console.WriteLine("-voiceVolume VOLUME");
             Console.WriteLine("    Change the volume of the speech engine. VOLUME must be a number from 0 to 7.");
             Console.WriteLine("    0 represents the default. 1 is silent, and 7 is full volume.");
+            Console.WriteLine("    NOTE: In most cases, it's recommended to use -volume instead.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
             Console.WriteLine("-help");
