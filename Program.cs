@@ -18,12 +18,19 @@ namespace sapicmd
         {
             if (item is VoiceInfo)
                 return true;
+            if (item is SpecialItem.Reset)
+                return true;
             return false;
         }
 
         enum SsmlElementType
         {
             Voice
+        }
+
+        enum SpecialItem
+        {
+            Reset
         }
 
         static int Main(string[] args)
@@ -94,6 +101,10 @@ namespace sapicmd
                         Console.Error.WriteLine("No voice with the name '{0}' was found.", name);
                     }
                     prompt_items.Add(info);
+                }
+                else if (lower == "-reset")
+                {
+                    prompt_items.Add(SpecialItem.Reset);
                 }
                 else if (lower == "-listvoices")
                 {
@@ -171,12 +182,25 @@ namespace sapicmd
                     builder.StartVoice(info);
                     elements.Push(SsmlElementType.Voice);
                 }
+                else if (item is SpecialItem.Reset)
+                {
+                    ResetVoice(builder, elements);
+                }
                 else
                 {
                     throw new ApplicationException(String.Format("Unexpected error, don't know what to do with {0}", item));
                 }
             }
 
+            ResetVoice(builder, elements);
+
+            synthesizer.Speak(builder);
+
+            return 0;
+        }
+
+        private static void ResetVoice(PromptBuilder builder, Stack<SsmlElementType> elements)
+        {
             while (elements.Count != 0)
             {
                 switch (elements.Pop())
@@ -186,10 +210,6 @@ namespace sapicmd
                         break;
                 }
             }
-
-            synthesizer.Speak(builder);
-
-            return 0;
         }
 
         private static void Usage()
@@ -209,6 +229,8 @@ namespace sapicmd
             Console.WriteLine("    EXAMPLE: sapicmd -voice Zira -text \"Spoken as Zira\" -voice David -text \"Spoken as David\"");
             Console.WriteLine("-listVoices");
             Console.WriteLine("    Print a list of installed voices and exit.");
+            Console.WriteLine("-reset");
+            Console.WriteLine("    Change all voice options back to the defaults.");
             Console.WriteLine("-help");
             Console.WriteLine("    Print this help text and exit.");
         }
