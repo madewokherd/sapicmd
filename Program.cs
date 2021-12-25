@@ -52,6 +52,24 @@ namespace sapicmd
                     }
                     prompt_items.Add(ReadFileContents(args[i]));
                 }
+                else if (lower == "-listvoices")
+                {
+                    foreach (var voice in synthesizer.GetInstalledVoices())
+                    {
+                        var info = voice.VoiceInfo;
+                        if (!voice.Enabled)
+                        {
+                            Console.WriteLine("{0} (disabled)", info.Id);
+                        }
+                        Console.WriteLine("{0}", info.Id);
+                        Console.WriteLine(" Name: {0}", info.Name);
+                        Console.WriteLine(" Culture: {0}", info.Culture.DisplayName);
+                        Console.WriteLine(" Age: {0}", info.Age);
+                        Console.WriteLine(" Gender: {0}", info.Gender);
+                        Console.WriteLine(" Description: {0}", info.Description);
+                    }
+                    return 0;
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -103,6 +121,8 @@ namespace sapicmd
             Console.WriteLine("-textFile FILENAME");
             Console.WriteLine("-textFile URL");
             Console.WriteLine("    Read the contents of the given file as text.");
+            Console.WriteLine("-listVoices");
+            Console.WriteLine("    Print a list of installed voices and exit.");
             Console.WriteLine("-help");
             Console.WriteLine("    Print this help text and exit.");
         }
