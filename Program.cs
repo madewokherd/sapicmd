@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Speech.Synthesis;
 
 namespace sapicmd
 {
     internal class Program
     {
+        static string ReadFileContents(string filename)
+        {
+            WebClient wc = new WebClient();
+
+            return wc.DownloadString(filename);
+        }
+
         static int Main(string[] args)
         {
             SpeechSynthesizer synthesizer = new SpeechSynthesizer();
@@ -33,6 +41,16 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add(args[i]);
+                }
+                else if (lower == "-textfile")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or url after -textFile");
+                        return 1;
+                    }
+                    prompt_items.Add(ReadFileContents(args[i]));
                 }
                 else
                 {
@@ -77,6 +95,9 @@ namespace sapicmd
             Console.WriteLine("-text TEXT");
             Console.WriteLine("    Read the given text.");
             Console.WriteLine("    Text can also be given without the -text switch as long as it does not start with '-'.");
+            Console.WriteLine("-textFile FILENAME");
+            Console.WriteLine("-textFile URL");
+            Console.WriteLine("    Read the contents of the given file as text.");
         }
     }
 }
