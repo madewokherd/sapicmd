@@ -18,7 +18,8 @@ namespace sapicmd
         {
             if (item is VoiceInfo ||
                 item is SpecialItem.Reset ||
-                item is PromptRate)
+                item is PromptRate ||
+                item is PromptEmphasis)
                 return true;
             return false;
         }
@@ -108,7 +109,7 @@ namespace sapicmd
                     i++;
                     if (i == args.Length)
                     {
-                        Console.Error.WriteLine("Missing rate after -rate");
+                        Console.Error.WriteLine("Missing number after -rate");
                         return 1;
                     }
                     int rate;
@@ -118,6 +119,22 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add((PromptRate)rate);
+                }
+                else if (lower == "-emphasis")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing number after -emphasis");
+                        return 1;
+                    }
+                    int emphasis;
+                    if (!int.TryParse(args[i], out emphasis) || emphasis < 0 || emphasis > 4)
+                    {
+                        Console.Error.WriteLine("-emphasis must be followed by a number from 0 to 4");
+                        return 1;
+                    }
+                    prompt_items.Add((PromptEmphasis)emphasis);
                 }
                 else if (lower == "-reset")
                 {
@@ -211,6 +228,17 @@ namespace sapicmd
                     builder.StartStyle(style);
                     elements.Push(SsmlElementType.Style);
                 }
+                else if (item is PromptEmphasis emphasis)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Style)
+                    {
+                        elements.Pop();
+                        builder.EndStyle();
+                    }
+                    style.Emphasis = emphasis;
+                    builder.StartStyle(style);
+                    elements.Push(SsmlElementType.Style);
+                }
                 else if (item is SpecialItem.Reset)
                 {
                     ResetVoice(builder, elements);
@@ -266,6 +294,11 @@ namespace sapicmd
             Console.WriteLine("    Change the rate of speech. RATE must be a number from 0 to 5.");
             Console.WriteLine("    0 sets the rate to the default.");
             Console.WriteLine("    1 is the fastest, and 5 is the slowest.");
+            Console.WriteLine("-emphasis EMPHASIS");
+            Console.WriteLine("    Change the emphasis of speech. EMPHASIS must be a number from 0 to 4.");
+            Console.WriteLine("    Note that this is unsupported by the default voices in Windows, and will have no effect if a default voice is used.");
+            Console.WriteLine("    0 sets emphasis to the default.");
+            Console.WriteLine("    1 is the strongest.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
             Console.WriteLine("-help");
