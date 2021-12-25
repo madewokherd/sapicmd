@@ -19,7 +19,8 @@ namespace sapicmd
             if (item is VoiceInfo ||
                 item is SpecialItem.Reset ||
                 item is PromptRate ||
-                item is PromptEmphasis)
+                item is PromptEmphasis ||
+                item is PromptVolume)
                 return true;
             return false;
         }
@@ -136,6 +137,22 @@ namespace sapicmd
                     }
                     prompt_items.Add((PromptEmphasis)emphasis);
                 }
+                else if (lower == "-voicevolume")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing number after -voiceVolume");
+                        return 1;
+                    }
+                    int volume;
+                    if (!int.TryParse(args[i], out volume) || volume < 0 || volume > 7)
+                    {
+                        Console.Error.WriteLine("-voiceVolume must be followed by a number from 0 to 7");
+                        return 1;
+                    }
+                    prompt_items.Add((PromptVolume)volume);
+                }
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
@@ -239,6 +256,17 @@ namespace sapicmd
                     builder.StartStyle(style);
                     elements.Push(SsmlElementType.Style);
                 }
+                else if (item is PromptVolume volume)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Style)
+                    {
+                        elements.Pop();
+                        builder.EndStyle();
+                    }
+                    style.Volume = volume;
+                    builder.StartStyle(style);
+                    elements.Push(SsmlElementType.Style);
+                }
                 else if (item is SpecialItem.Reset)
                 {
                     ResetVoice(builder, elements);
@@ -299,6 +327,9 @@ namespace sapicmd
             Console.WriteLine("    Note that this is unsupported by the default voices in Windows, and will have no effect if a default voice is used.");
             Console.WriteLine("    0 sets emphasis to the default.");
             Console.WriteLine("    1 is the strongest.");
+            Console.WriteLine("-voiceVolume VOLUME");
+            Console.WriteLine("    Change the volume of the speech engine. VOLUME must be a number from 0 to 7.");
+            Console.WriteLine("    0 represents the default. 1 is silent, and 7 is full volume.");
             Console.WriteLine("-reset");
             Console.WriteLine("    Change all voice options back to the defaults.");
             Console.WriteLine("-help");
