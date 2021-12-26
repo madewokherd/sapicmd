@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Speech.Synthesis;
 using System.Text;
@@ -107,6 +108,8 @@ namespace sapicmd
             List<object> prompt_items = new List<object>();
 
             synthesizer.SetOutputToDefaultAudioDevice();
+
+            TextWriter xmlOutput = null;
 
             // Argument processing
             for (int i=0; i < args.Length; i++)
@@ -313,6 +316,10 @@ namespace sapicmd
                     }
 
                     prompt_items.Add(new LoopItem(count, fade));
+                }
+                else if (lower == "-printssml")
+                {
+                    xmlOutput = Console.Out;
                 }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
@@ -570,8 +577,15 @@ namespace sapicmd
             {
                 if (prompt is PromptBuilder promptbuilder)
                 {
-                    synthesizer.Speak(promptbuilder);
-                    synthesizer = new SpeechSynthesizer();
+                    if (xmlOutput != null)
+                    {
+                        xmlOutput.WriteLine(promptbuilder.ToXml());
+                    }
+                    else
+                    {
+                        synthesizer.Speak(promptbuilder);
+                        synthesizer = new SpeechSynthesizer();
+                    }
                 }
                 else if (prompt is VolumeItem volumeitem)
                 {
@@ -592,7 +606,10 @@ namespace sapicmd
                         pb.EndStyle();
                         if (interactive_item.voiceinfo != null)
                             pb.EndVoice();
-                        synthesizer.Speak(pb);
+                        if (xmlOutput != null)
+                            xmlOutput.WriteLine(pb.ToXml());
+                        else
+                            synthesizer.Speak(pb);
                         Console.Write("> ");
                     }
                 }
@@ -716,7 +733,7 @@ namespace sapicmd
             Console.WriteLine("-volume VOLUME");
             Console.WriteLine("    Change the volume of output. VOLUME must be a number from 0 to 100.");
             Console.WriteLine("    0 is silent, and 100 is full volume.");
-            Console.WriteLine("    NOTE: This cannot be used with XML output. To output a change in volume to XML, use -voiceVolume.");
+            Console.WriteLine("    NOTE: This cannot be used with SSML output. To output a change in volume to SSML, use -voiceVolume.");
             Console.WriteLine("-voiceVolume VOLUME");
             Console.WriteLine("    Change the volume of the speech engine. VOLUME must be a number from 0 to 7.");
             Console.WriteLine("    0 represents the default. 1 is silent, and 7 is full volume.");
@@ -737,6 +754,8 @@ namespace sapicmd
             Console.WriteLine("-endSentence");
             Console.WriteLine("-endParagraph");
             Console.WriteLine("    End the current sentence or paragraph.");
+            Console.WriteLine("-printSsml");
+            Console.WriteLine("    Print SSML to stdout instead of speaking.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
