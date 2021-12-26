@@ -71,9 +71,11 @@ namespace sapicmd
         class SoundItem
         {
             public Uri uri;
-            public SoundItem(Uri uri)
+            public string alt_text;
+            public SoundItem(Uri uri, string alt_text=null)
             {
                 this.uri = uri;
+                this.alt_text = alt_text;
             }
         }
 
@@ -371,6 +373,23 @@ namespace sapicmd
                     }
                     prompt_items.Add(new SoundItem(new Uri(args[i])));
                 }
+                else if (lower == "-playsoundalt")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or URL after -playSoundAlt");
+                        return 1;
+                    }
+                    Uri uri = new Uri(args[i]);
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing alternate text after -playSoundAlt");
+                        return 1;
+                    }
+                    prompt_items.Add(new SoundItem(uri, args[i]));
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -493,7 +512,10 @@ namespace sapicmd
                 }
                 else if (item is SoundItem sound)
                 {
-                    builder.AppendAudio(sound.uri);
+                    if (sound.alt_text is null)
+                        builder.AppendAudio(sound.uri);
+                    else
+                        builder.AppendAudio(sound.uri, sound.alt_text);
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -837,6 +859,8 @@ namespace sapicmd
             Console.WriteLine("    Write SSML to a file instead of speaking.");
             Console.WriteLine("-playSound FILENAME");
             Console.WriteLine("-playSound URL");
+            Console.WriteLine("-playSoundAlt FILENAME ALTERNATE_TEXT");
+            Console.WriteLine("-playSoundAlt URL ALTERNATE_TEXT");
             Console.WriteLine("    Play a WAV file.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
