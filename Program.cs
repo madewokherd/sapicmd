@@ -73,6 +73,23 @@ namespace sapicmd
             }
         }
 
+        class InteractiveItem
+        {
+            public VoiceInfo voiceinfo;
+            public PromptStyle style;
+            public InteractiveItem()
+            {
+                this.style = new PromptStyle();
+            }
+            public InteractiveItem(VoiceInfo info, PromptStyle style)
+            {
+                this.voiceinfo = info;
+                this.style = new PromptStyle();
+                this.style.Emphasis = style.Emphasis;
+                this.style.Rate = style.Rate;
+                this.style.Volume = style.Volume;
+            }
+        }
 
         enum SpecialItem
         {
@@ -214,6 +231,10 @@ namespace sapicmd
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
+                }
+                else if (lower == "-interactive")
+                {
+                    prompt_items.Add(new InteractiveItem());
                 }
                 else if (lower == "-listvoices")
                 {
@@ -443,6 +464,20 @@ namespace sapicmd
                     prompts.Add(volume_item);
                     currentVolume = volume_item.volume;
                 }
+                else if (item is InteractiveItem interactive_item)
+                {
+                    ResetVoice(builder, elements);
+                    prompts.Add(builder);
+                    builder = new PromptBuilder();
+                    if (voiceinfo != null)
+                    {
+                        builder.StartVoice(voiceinfo);
+                        elements.Push(SsmlElementType.Voice);
+                    }
+                    builder.StartStyle(style);
+                    elements.Push(SsmlElementType.Style);
+                    prompts.Add(new InteractiveItem(voiceinfo, style));
+                }
                 else if (item is SpecialItem.Reset)
                 {
                     ResetVoice(builder, elements);
@@ -473,6 +508,25 @@ namespace sapicmd
                 else if (prompt is VolumeItem volumeitem)
                 {
                     synthesizer.Volume = volumeitem.volume;
+                }
+                else if (prompt is InteractiveItem interactive_item)
+                {
+                    string line;
+                    Console.WriteLine("Enter text to read. <CTRL Z> <ENTER> to quit.");
+                    Console.Write("> ");
+                    while ((line = Console.ReadLine()) != null)
+                    {
+                        PromptBuilder pb = new PromptBuilder();
+                        if (interactive_item.voiceinfo != null)
+                            pb.StartVoice(interactive_item.voiceinfo);
+                        pb.StartStyle(interactive_item.style);
+                        pb.AppendText(line);
+                        pb.EndStyle();
+                        if (interactive_item.voiceinfo != null)
+                            pb.EndVoice();
+                        synthesizer.Speak(pb);
+                        Console.Write("> ");
+                    }
                 }
             }
 
@@ -569,6 +623,8 @@ namespace sapicmd
             Console.WriteLine("-textFile FILENAME");
             Console.WriteLine("-textFile URL");
             Console.WriteLine("    Read the contents of the given file as text.");
+            Console.WriteLine("-interactive");
+            Console.WriteLine("    Read lines as they are typed.");
             Console.WriteLine("-voice NAME");
             Console.WriteLine("    Switch to a specific voice.");
             Console.WriteLine("    EXAMPLE: sapicmd -voice Zira -text \"Spoken as Zira\" -voice David -text \"Spoken as David\"");
