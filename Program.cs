@@ -461,6 +461,16 @@ namespace sapicmd
                     }
                     prompt_items.Add(new SoundItem(uri, args[i]));
                 }
+                else if (lower == "-plsfile")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or URL after -plsfile");
+                        return 1;
+                    }
+                    synthesizer.AddLexicon(new Uri(args[i], UriKind.RelativeOrAbsolute), "application/pls+xml");
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -968,6 +978,9 @@ namespace sapicmd
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
+            Console.WriteLine("-plsFile FILENAME");
+            Console.WriteLine("-plsFile URL");
+            Console.WriteLine("    Add a PLS lexicon file to the synthesizer.");
             Console.WriteLine("-null");
             Console.WriteLine("    Do not play or write synthesized text.");
             Console.WriteLine("-help");
