@@ -321,6 +321,16 @@ namespace sapicmd
                 {
                     xmlOutput = Console.Out;
                 }
+                else if (lower == "-writessml")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename after -writeSsml");
+                        return 1;
+                    }
+                    xmlOutput = new StreamWriter(args[i]);
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -628,6 +638,9 @@ namespace sapicmd
                 }
             }
 
+            if (xmlOutput != null)
+                xmlOutput.Close();
+
             return 0;
         }
 
@@ -769,6 +782,8 @@ namespace sapicmd
             Console.WriteLine("    End the current sentence or paragraph.");
             Console.WriteLine("-printSsml");
             Console.WriteLine("    Print SSML to stdout instead of speaking.");
+            Console.WriteLine("-writeSsml FILENAME");
+            Console.WriteLine("    Write SSML to a file instead of speaking.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
