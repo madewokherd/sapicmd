@@ -286,6 +286,22 @@ namespace sapicmd
                     }
                     prompt_items.Add((PromptBreak)strength);
                 }
+                else if (lower == "-wait")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing number of seconds after -wait");
+                        return 1;
+                    }
+                    double seconds;
+                    if (!double.TryParse(args[i], out seconds) || !(seconds >= 0.0))
+                    {
+                        Console.Error.WriteLine("-wait must be followed by a non-negative number");
+                        return 1;
+                    }
+                    prompt_items.Add(TimeSpan.FromSeconds(seconds));
+                }
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
@@ -545,6 +561,10 @@ namespace sapicmd
                 else if (item is PromptBreak strength)
                 {
                     builder.AppendBreak(strength);
+                }
+                else if (item is TimeSpan ts)
+                {
+                    builder.AppendBreak(ts);
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -896,6 +916,8 @@ namespace sapicmd
             Console.WriteLine("-breakStrength STRENGTH");
             Console.WriteLine("    Insert a break in speech. STRENGTH must be a number from 0 to 5.");
             Console.WriteLine("    0 indicates no gap between words, and 5 is a long gap.");
+            Console.WriteLine("-wait SECONDS");
+            Console.WriteLine("    Wait the specified number of seconds.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
