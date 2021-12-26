@@ -420,6 +420,16 @@ namespace sapicmd
                     }
                     xmlOutput = new StreamWriter(args[i]);
                 }
+                else if (lower == "-writewav")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename after -writeWav");
+                        return 1;
+                    }
+                    synthesizer.SetOutputToWaveFile(args[i]);
+                }
                 else if (lower == "-playsound")
                 {
                     i++;
@@ -935,6 +945,8 @@ namespace sapicmd
             Console.WriteLine("    Print SSML to stdout instead of speaking.");
             Console.WriteLine("-writeSsml FILENAME");
             Console.WriteLine("    Write SSML to a file instead of speaking.");
+            Console.WriteLine("-writeWav FILENAME");
+            Console.WriteLine("    Write to a WAV file instead of the default speaker.");
             Console.WriteLine("-playSound FILENAME");
             Console.WriteLine("-playSound URL");
             Console.WriteLine("-playSoundAlt FILENAME ALTERNATE_TEXT");
