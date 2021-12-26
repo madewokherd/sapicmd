@@ -270,6 +270,22 @@ namespace sapicmd
                     }
                     prompt_items.Add((PromptVolume)volume);
                 }
+                else if (lower == "-breakstrength")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing number after -breakStrength");
+                        return 1;
+                    }
+                    int strength;
+                    if (!int.TryParse(args[i], out strength) || strength < 0 || strength > 5)
+                    {
+                        Console.Error.WriteLine("-breakStrength must be followed by a number from 0 to 5");
+                        return 1;
+                    }
+                    prompt_items.Add((PromptBreak)strength);
+                }
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
@@ -525,6 +541,10 @@ namespace sapicmd
                 else if (item is SpecialItem.Break)
                 {
                     builder.AppendBreak();
+                }
+                else if (item is PromptBreak strength)
+                {
+                    builder.AppendBreak(strength);
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -873,6 +893,9 @@ namespace sapicmd
             Console.WriteLine("    Play a WAV file.");
             Console.WriteLine("-break");
             Console.WriteLine("    Insert a break in speech.");
+            Console.WriteLine("-breakStrength STRENGTH");
+            Console.WriteLine("    Insert a break in speech. STRENGTH must be a number from 0 to 5.");
+            Console.WriteLine("    0 indicates no gap between words, and 5 is a long gap.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
