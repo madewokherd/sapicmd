@@ -34,7 +34,9 @@ namespace sapicmd
         enum SsmlElementType
         {
             Voice,
-            Style
+            Style,
+            Sentence,
+            Paragraph
         }
 
         class VolumeItem
@@ -93,7 +95,11 @@ namespace sapicmd
 
         enum SpecialItem
         {
-            Reset
+            Reset,
+            BeginSentence,
+            EndSentence,
+            BeginParagraph,
+            EndParagraph
         }
 
         int ProcessCommandLine(string[] args)
@@ -235,6 +241,22 @@ namespace sapicmd
                 else if (lower == "-interactive")
                 {
                     prompt_items.Add(new InteractiveItem());
+                }
+                else if (lower == "-newsentence" || lower == "-beginsentence")
+                {
+                    prompt_items.Add(SpecialItem.BeginSentence);
+                }
+                else if (lower == "-endsentence")
+                {
+                    prompt_items.Add(SpecialItem.EndSentence);
+                }
+                else if (lower == "-newparagraph" || lower == "-beginparagraph")
+                {
+                    prompt_items.Add(SpecialItem.BeginParagraph);
+                }
+                else if (lower == "-endparagraph")
+                {
+                    prompt_items.Add(SpecialItem.EndParagraph);
                 }
                 else if (lower == "-listvoices")
                 {
@@ -449,6 +471,52 @@ namespace sapicmd
                     builder.StartStyle(style);
                     elements.Push(SsmlElementType.Style);
                 }
+                else if (item is SpecialItem.BeginSentence)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Sentence)
+                    {
+                        elements.Pop();
+                        builder.EndSentence();
+                    }
+                    builder.StartSentence();
+                    elements.Push(SsmlElementType.Sentence);
+                }
+                else if (item is SpecialItem.EndSentence)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Sentence)
+                    {
+                        elements.Pop();
+                        builder.EndSentence();
+                    }
+                    else
+                    {
+                        Console.WriteLine("ERROR: -endsentence without matching -beginsentence");
+                        return 1;
+                    }
+                }
+                else if (item is SpecialItem.BeginParagraph)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Paragraph)
+                    {
+                        elements.Pop();
+                        builder.EndParagraph();
+                    }
+                    builder.StartParagraph();
+                    elements.Push(SsmlElementType.Paragraph);
+                }
+                else if (item is SpecialItem.EndParagraph)
+                {
+                    if (elements.Count != 0 && elements.Peek() == SsmlElementType.Paragraph)
+                    {
+                        elements.Pop();
+                        builder.EndParagraph();
+                    }
+                    else
+                    {
+                        Console.WriteLine("ERROR: -endparagraph without matching -beginparagraph");
+                        return 1;
+                    }
+                }
                 else if (item is VolumeItem volume_item)
                 {
                     ResetVoice(builder, elements);
@@ -607,6 +675,12 @@ namespace sapicmd
                     case SsmlElementType.Style:
                         builder.EndStyle();
                         break;
+                    case SsmlElementType.Sentence:
+                        builder.EndSentence();
+                        break;
+                    case SsmlElementType.Paragraph:
+                        builder.EndParagraph();
+                        break;
                 }
             }
         }
@@ -655,6 +729,14 @@ namespace sapicmd
             Console.WriteLine("    Repeat all previous instructions N times.");
             Console.WriteLine("    If -fadeInLoop is used, gradually increase to full volume.");
             Console.WriteLine("    If -fadeOutLoop is used, gradually decrease from full volume.");
+            Console.WriteLine("-beginSentence");
+            Console.WriteLine("-beginParagraph");
+            Console.WriteLine("-newSentence");
+            Console.WriteLine("-newParagraph");
+            Console.WriteLine("    Start a new sentence or paragraph.");
+            Console.WriteLine("-endSentence");
+            Console.WriteLine("-endParagraph");
+            Console.WriteLine("    End the current sentence or paragraph.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
