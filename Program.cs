@@ -423,9 +423,12 @@ namespace sapicmd
             PromptStyle style = new PromptStyle();
             VoiceInfo voiceinfo = null;
             int currentVolume = 100;
+            bool seen_noncontrol_item = false;
 
             foreach (var item in prompt_items)
             {
+                if (!IsControlItem(item) && !(item is InteractiveItem))
+                    seen_noncontrol_item = true;
                 if (item is string text)
                 {
                     builder.AppendText(text);
@@ -527,8 +530,10 @@ namespace sapicmd
                 else if (item is VolumeItem volume_item)
                 {
                     ResetVoice(builder, elements);
-                    prompts.Add(builder);
+                    if (seen_noncontrol_item)
+                        prompts.Add(builder);
                     builder = new PromptBuilder();
+                    seen_noncontrol_item = false;
                     if (voiceinfo != null)
                     {
                         builder.StartVoice(voiceinfo);
@@ -542,8 +547,10 @@ namespace sapicmd
                 else if (item is InteractiveItem interactive_item)
                 {
                     ResetVoice(builder, elements);
-                    prompts.Add(builder);
+                    if (seen_noncontrol_item)
+                        prompts.Add(builder);
                     builder = new PromptBuilder();
+                    seen_noncontrol_item = false;
                     if (voiceinfo != null)
                     {
                         builder.StartVoice(voiceinfo);
@@ -560,6 +567,11 @@ namespace sapicmd
                     if (currentVolume != 100)
                     {
                         currentVolume = 100;
+                        if (seen_noncontrol_item)
+                            prompts.Add(builder);
+                        prompts.Add(new VolumeItem(100));
+                        builder = new PromptBuilder();
+                        seen_noncontrol_item = false;
                     }
                     voiceinfo = null;
                 }
@@ -569,7 +581,8 @@ namespace sapicmd
                 }
             }
 
-            prompts.Add(builder);
+            if (seen_noncontrol_item)
+                prompts.Add(builder);
 
             ResetVoice(builder, elements);
 
