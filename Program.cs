@@ -442,7 +442,7 @@ namespace sapicmd
                         Console.Error.WriteLine("Missing filename or URL after -playSound");
                         return 1;
                     }
-                    prompt_items.Add(new SoundItem(new Uri(args[i])));
+                    prompt_items.Add(new SoundItem(new Uri(args[i], UriKind.RelativeOrAbsolute)));
                 }
                 else if (lower == "-playsoundalt")
                 {
@@ -452,7 +452,7 @@ namespace sapicmd
                         Console.Error.WriteLine("Missing filename or URL after -playSoundAlt");
                         return 1;
                     }
-                    Uri uri = new Uri(args[i]);
+                    Uri uri = new Uri(args[i], UriKind.RelativeOrAbsolute);
                     i++;
                     if (i == args.Length)
                     {
