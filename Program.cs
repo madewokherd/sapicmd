@@ -430,6 +430,10 @@ namespace sapicmd
                     }
                     synthesizer.SetOutputToWaveFile(args[i]);
                 }
+                else if (lower == "-null")
+                {
+                    synthesizer.SetOutputToNull();
+                }
                 else if (lower == "-playsound")
                 {
                     i++;
@@ -964,6 +968,8 @@ namespace sapicmd
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
+            Console.WriteLine("-null");
+            Console.WriteLine("    Do not play or write synthesized text.");
             Console.WriteLine("-help");
             Console.WriteLine("    Print this help text and exit.");
         }
