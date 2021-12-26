@@ -59,6 +59,15 @@ namespace sapicmd
             }
         }
 
+        class BookmarkItem
+        {
+            public string name;
+            public BookmarkItem(string name)
+            {
+                this.name = name;
+            }
+        }
+
         class SsmlItem
         {
             public string raw_markup;
@@ -130,6 +139,7 @@ namespace sapicmd
             List<object> prompt_items = new List<object>();
 
             synthesizer.SetOutputToDefaultAudioDevice();
+            synthesizer.BookmarkReached += OnBookmarkReached;
 
             TextWriter xmlOutput = null;
 
@@ -153,6 +163,16 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add(args[i]);
+                }
+                else if (lower == "-bookmark")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing name after -bookmark");
+                        return 1;
+                    }
+                    prompt_items.Add(new BookmarkItem(args[i]));
                 }
                 else if (lower == "-textfile")
                 {
@@ -566,6 +586,10 @@ namespace sapicmd
                 {
                     builder.AppendBreak(ts);
                 }
+                else if (item is BookmarkItem bi)
+                {
+                    builder.AppendBookmark(bi.name);
+                }
                 else if (item is VoiceInfo info)
                 {
                     if (elements.Count != 0 && elements.Peek() == SsmlElementType.Voice)
@@ -763,6 +787,11 @@ namespace sapicmd
             return 0;
         }
 
+        private void OnBookmarkReached(object sender, BookmarkReachedEventArgs e)
+        {
+            Console.WriteLine("Bookmark reached: {0}", e.Bookmark);
+        }
+
         private string JsonToText(string raw_json)
         {
             using (var json = JsonDocument.Parse(raw_json))
@@ -918,6 +947,8 @@ namespace sapicmd
             Console.WriteLine("    0 indicates no gap between words, and 5 is a long gap.");
             Console.WriteLine("-wait SECONDS");
             Console.WriteLine("    Wait the specified number of seconds.");
+            Console.WriteLine("-bookmark NAME");
+            Console.WriteLine("    Insert a bookmark.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
