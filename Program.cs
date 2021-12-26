@@ -189,7 +189,8 @@ namespace sapicmd
                     }
                     if (info == null)
                     {
-                        Console.Error.WriteLine("No voice with the name '{0}' was found.", name);
+                        Console.Error.WriteLine("ERROR: No voice with the name '{0}' was found.", name);
+                        return 1;
                     }
                     prompt_items.Add(info);
                 }
