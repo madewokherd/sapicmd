@@ -5,6 +5,7 @@ using System.Net;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
+using System.Xml;
 
 namespace sapicmd
 {
@@ -55,6 +56,15 @@ namespace sapicmd
             public JsonItem(string raw_json)
             {
                 this.raw_json = raw_json;
+            }
+        }
+
+        class SsmlItem
+        {
+            public string raw_markup;
+            public SsmlItem(string raw_markup)
+            {
+                this.raw_markup = raw_markup;
             }
         }
 
@@ -141,6 +151,16 @@ namespace sapicmd
                         return 1;
                     }
                     prompt_items.Add(ReadFileContents(args[i]));
+                }
+                else if (lower == "-ssmlfile")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or url after -ssmlFile");
+                        return 1;
+                    }
+                    prompt_items.Add(new SsmlItem(ReadFileContents(args[i])));
                 }
                 else if (lower == "-voice")
                 {
@@ -447,6 +467,10 @@ namespace sapicmd
                 {
                     builder.AppendText(JsonToText(json.raw_json));
                 }
+                else if (item is SsmlItem ssml)
+                {
+                    builder.AppendSsml(XmlReader.Create(new StringReader(ssml.raw_markup)));
+                }
                 else if (item is VoiceInfo info)
                 {
                     if (elements.Count != 0 && elements.Peek() == SsmlElementType.Voice)
@@ -629,7 +653,7 @@ namespace sapicmd
                         pb.EndStyle();
                         if (interactive_item.voiceinfo != null)
                             pb.EndVoice();
-                        if (xmlOutput != null)
+                        if (xmlOutput == Console.Out)
                             xmlOutput.WriteLine(pb.ToXml());
                         else
                             synthesizer.Speak(pb);
@@ -740,6 +764,9 @@ namespace sapicmd
             Console.WriteLine("-textFile FILENAME");
             Console.WriteLine("-textFile URL");
             Console.WriteLine("    Read the contents of the given file as text.");
+            Console.WriteLine("-ssmlFile FILENAME");
+            Console.WriteLine("-ssmlFile URL");
+            Console.WriteLine("    Read the contents of the given file as SSML.");
             Console.WriteLine("-interactive");
             Console.WriteLine("    Read lines as they are typed.");
             Console.WriteLine("-voice NAME");
