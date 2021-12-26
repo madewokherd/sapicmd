@@ -1,0 +1,83 @@
+Usage: sapicmd [INSTRUCTION [INSTRUCTION ...]]
+
+Instructions may be any of the following:
+
+-text TEXT
+    Read the given text.
+    Text can also be given without the -text switch as long as it does not start with '-'.
+-textFile FILENAME
+-textFile URL
+    Read the contents of the given file as text.
+-ssmlFile FILENAME
+-ssmlFile URL
+    Read the contents of the given file as SSML.
+-interactive
+    Read lines as they are typed.
+-voice NAME
+    Switch to a specific voice.
+    EXAMPLE: sapicmd -voice Zira -text "Spoken as Zira" -voice David -text "Spoken as David"
+-listVoices
+    Print a list of installed voices and exit.
+-rate RATE
+    Change the rate of speech. RATE must be a number from 0 to 5.
+    0 sets the rate to the default.
+    1 is the fastest, and 5 is the slowest.
+-emphasis EMPHASIS
+    Change the emphasis of speech. EMPHASIS must be a number from 0 to 4.
+    Note that this is unsupported by the default voices in Windows, and will have no effect if a default voice is used.
+    0 sets emphasis to the default.
+    1 is the strongest.
+-volume VOLUME
+    Change the volume of output. VOLUME must be a number from 0 to 100.
+    0 is silent, and 100 is full volume.
+    NOTE: This cannot be used with SSML output. To output a change in volume to SSML, use -voiceVolume.
+-voiceVolume VOLUME
+    Change the volume of the speech engine. VOLUME must be a number from 0 to 7.
+    0 represents the default. 1 is silent, and 7 is full volume.
+    NOTE: In most cases, it's recommended to use -volume instead.
+-reset
+    Change all voice options back to the defaults.
+-loop N
+-fadeInLoop N
+-fadeOutLoop N
+    Repeat all previous instructions N times.
+    If -fadeInLoop is used, gradually increase to full volume.
+    If -fadeOutLoop is used, gradually decrease from full volume.
+-beginSentence
+-beginParagraph
+-newSentence
+-newParagraph
+    Start a new sentence or paragraph.
+-endSentence
+-endParagraph
+    End the current sentence or paragraph.
+-printSsml
+    Print SSML to stdout instead of speaking.
+-writeSsml FILENAME
+    Write SSML to a file instead of speaking.
+-writeWav FILENAME
+    Write to a WAV file instead of the default speaker.
+-playSound FILENAME
+-playSound URL
+-playSoundAlt FILENAME ALTERNATE_TEXT
+-playSoundAlt URL ALTERNATE_TEXT
+    Play a WAV file.
+-break
+    Insert a break in speech.
+-breakStrength STRENGTH
+    Insert a break in speech. STRENGTH must be a number from 0 to 5.
+    0 indicates no gap between words, and 5 is a long gap.
+-wait SECONDS
+    Wait the specified number of seconds.
+-bookmark NAME
+    Insert a bookmark.
+-json FILENAME
+-json URL
+    Randomize text based on the given JSON file.
+-plsFile FILENAME
+-plsFile URL
+    Add a PLS lexicon file to the synthesizer.
+-null
+    Do not play or write synthesized text.
+-help
+    Print this help text and exit.
