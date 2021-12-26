@@ -68,6 +68,15 @@ namespace sapicmd
             }
         }
 
+        class SoundItem
+        {
+            public Uri uri;
+            public SoundItem(Uri uri)
+            {
+                this.uri = uri;
+            }
+        }
+
         enum LoopFade
         {
             Level,
@@ -352,6 +361,16 @@ namespace sapicmd
                     }
                     xmlOutput = new StreamWriter(args[i]);
                 }
+                else if (lower == "-playsound")
+                {
+                    i++;
+                    if (i == args.Length)
+                    {
+                        Console.Error.WriteLine("Missing filename or URL after -playSound");
+                        return 1;
+                    }
+                    prompt_items.Add(new SoundItem(new Uri(args[i])));
+                }
                 else if (lower == "-help" || lower == "-h" || lower == "/?")
                 {
                     Usage();
@@ -471,6 +490,10 @@ namespace sapicmd
                 else if (item is SsmlItem ssml)
                 {
                     builder.AppendSsml(XmlReader.Create(new StringReader(ssml.raw_markup)));
+                }
+                else if (item is SoundItem sound)
+                {
+                    builder.AppendAudio(sound.uri);
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -812,6 +835,9 @@ namespace sapicmd
             Console.WriteLine("    Print SSML to stdout instead of speaking.");
             Console.WriteLine("-writeSsml FILENAME");
             Console.WriteLine("    Write SSML to a file instead of speaking.");
+            Console.WriteLine("-playSound FILENAME");
+            Console.WriteLine("-playSound URL");
+            Console.WriteLine("    Play a WAV file.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
