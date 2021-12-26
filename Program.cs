@@ -121,7 +121,8 @@ namespace sapicmd
             BeginSentence,
             EndSentence,
             BeginParagraph,
-            EndParagraph
+            EndParagraph,
+            Break
         }
 
         int ProcessCommandLine(string[] args)
@@ -272,6 +273,10 @@ namespace sapicmd
                 else if (lower == "-reset")
                 {
                     prompt_items.Add(SpecialItem.Reset);
+                }
+                else if (lower == "-break")
+                {
+                    prompt_items.Add(SpecialItem.Break);
                 }
                 else if (lower == "-interactive")
                 {
@@ -516,6 +521,10 @@ namespace sapicmd
                         builder.AppendAudio(sound.uri);
                     else
                         builder.AppendAudio(sound.uri, sound.alt_text);
+                }
+                else if (item is SpecialItem.Break)
+                {
+                    builder.AppendBreak();
                 }
                 else if (item is VoiceInfo info)
                 {
@@ -862,6 +871,8 @@ namespace sapicmd
             Console.WriteLine("-playSoundAlt FILENAME ALTERNATE_TEXT");
             Console.WriteLine("-playSoundAlt URL ALTERNATE_TEXT");
             Console.WriteLine("    Play a WAV file.");
+            Console.WriteLine("-break");
+            Console.WriteLine("    Insert a break in speech.");
             Console.WriteLine("-json FILENAME");
             Console.WriteLine("-json URL");
             Console.WriteLine("    Randomize text based on the given JSON file.");
